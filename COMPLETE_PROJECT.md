@@ -1,0 +1,1226 @@
+# LeadHunter Pro Login System - Complete Package
+
+## COMPLETE PROJECT IN ONE FILE
+
+This file contains all the necessary code for the LeadHunter Pro Login System with Java Spring Boot backend.
+
+---
+
+## 1. POM.XML (Maven Configuration)
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.1.5</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.leadhunter</groupId>
+    <artifactId>leadhunter-pro-login</artifactId>
+    <version>1.0.0</version>
+    <name>LeadHunter Pro Login</name>
+    <description>LeadHunter Pro Login System</description>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.33</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.11.5</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+```
+
+---
+
+## 2. APPLICATION.PROPERTIES (Configuration)
+```properties
+spring.application.name=LeadHunter Pro Login
+
+# Server Configuration
+server.port=8080
+server.servlet.context-path=/api
+
+# Database Configuration
+spring.datasource.url=jdbc:mysql://localhost:3306/leadhunter_db
+spring.datasource.username=root
+spring.datasource.password=your_password
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JPA Configuration
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+spring.jpa.properties.hibernate.format_sql=true
+
+# JWT Configuration
+jwt.secret=your-secret-key-change-this-in-production-with-a-long-random-string
+jwt.expiration=86400000
+
+# CORS Configuration
+server.error.include-message=always
+```
+
+---
+
+## 3. LeadHunterApplication.java (Main Application)
+```java
+package com.leadhunter;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@SpringBootApplication
+public class LeadHunterApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(LeadHunterApplication.class, args);
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("http://localhost:3000", "http://localhost:8080")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
+            }
+        };
+    }
+}
+```
+
+---
+
+## 4. User.java (JPA Entity)
+```java
+package com.leadhunter.entity;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "users")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String username;
+
+    @Column(nullable = false)
+    private String password;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+}
+```
+
+---
+
+## 5. UserRepository.java (Database Interface)
+```java
+package com.leadhunter.repository;
+
+import com.leadhunter.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByUsername(String username);
+    Optional<User> findByEmail(String email);
+    boolean existsByUsername(String username);
+    boolean existsByEmail(String email);
+}
+```
+
+---
+
+## 6. LoginRequest.java (DTO)
+```java
+package com.leadhunter.dto;
+
+public class LoginRequest {
+    private String username;
+    private String password;
+
+    public LoginRequest() {
+    }
+
+    public LoginRequest(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+}
+```
+
+---
+
+## 7. LoginResponse.java (DTO)
+```java
+package com.leadhunter.dto;
+
+public class LoginResponse {
+    private boolean success;
+    private String message;
+    private String token;
+    private UserDto user;
+
+    public LoginResponse() {
+    }
+
+    public LoginResponse(boolean success, String message, String token, UserDto user) {
+        this.success = success;
+        this.message = message;
+        this.token = token;
+        this.user = user;
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public UserDto getUser() {
+        return user;
+    }
+
+    public void setUser(UserDto user) {
+        this.user = user;
+    }
+}
+```
+
+---
+
+## 8. UserDto.java (DTO)
+```java
+package com.leadhunter.dto;
+
+public class UserDto {
+    private Long id;
+    private String username;
+    private String email;
+
+    public UserDto() {
+    }
+
+    public UserDto(Long id, String username, String email) {
+        this.id = id;
+        this.username = username;
+        this.email = email;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+}
+```
+
+---
+
+## 9. JwtTokenProvider.java (JWT Service)
+```java
+package com.leadhunter.service;
+
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
+import java.util.Date;
+
+@Component
+public class JwtTokenProvider {
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${jwt.expiration}")
+    private long jwtExpirationMs;
+
+    public String generateToken(String username) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
+                .signWith(key, SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    public String getUsernameFromToken(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+            Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}
+```
+
+---
+
+## 10. AuthService.java (Business Logic)
+```java
+package com.leadhunter.service;
+
+import com.leadhunter.dto.LoginRequest;
+import com.leadhunter.dto.LoginResponse;
+import com.leadhunter.dto.UserDto;
+import com.leadhunter.entity.User;
+import com.leadhunter.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.Optional;
+
+@Service
+public class AuthService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
+    public LoginResponse login(LoginRequest loginRequest) {
+        Optional<User> user = userRepository.findByUsername(loginRequest.getUsername());
+
+        if (user.isEmpty()) {
+            return new LoginResponse(false, "User not found", null, null);
+        }
+
+        User foundUser = user.get();
+
+        if (!passwordEncoder.matches(loginRequest.getPassword(), foundUser.getPassword())) {
+            return new LoginResponse(false, "Invalid password", null, null);
+        }
+
+        String token = jwtTokenProvider.generateToken(foundUser.getUsername());
+        UserDto userDto = new UserDto(foundUser.getId(), foundUser.getUsername(), foundUser.getEmail());
+
+        return new LoginResponse(true, "Login successful", token, userDto);
+    }
+
+    public LoginResponse register(LoginRequest loginRequest, String email) {
+        if (userRepository.existsByUsername(loginRequest.getUsername())) {
+            return new LoginResponse(false, "Username already exists", null, null);
+        }
+
+        if (userRepository.existsByEmail(email)) {
+            return new LoginResponse(false, "Email already exists", null, null);
+        }
+
+        User newUser = new User();
+        newUser.setUsername(loginRequest.getUsername());
+        newUser.setPassword(passwordEncoder.encode(loginRequest.getPassword()));
+        newUser.setEmail(email);
+
+        User savedUser = userRepository.save(newUser);
+        String token = jwtTokenProvider.generateToken(savedUser.getUsername());
+        UserDto userDto = new UserDto(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail());
+
+        return new LoginResponse(true, "Registration successful", token, userDto);
+    }
+
+    public boolean validateToken(String token) {
+        return jwtTokenProvider.validateToken(token);
+    }
+
+    public String getUsernameFromToken(String token) {
+        return jwtTokenProvider.getUsernameFromToken(token);
+    }
+}
+```
+
+---
+
+## 11. AuthController.java (REST API Endpoints)
+```java
+package com.leadhunter.controller;
+
+import com.leadhunter.dto.LoginRequest;
+import com.leadhunter.dto.LoginResponse;
+import com.leadhunter.service.AuthService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/auth")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8080"})
+public class AuthController {
+
+    @Autowired
+    private AuthService authService;
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
+        if (loginRequest.getUsername() == null || loginRequest.getUsername().isEmpty() ||
+            loginRequest.getPassword() == null || loginRequest.getPassword().isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                new LoginResponse(false, "Username and password are required", null, null)
+            );
+        }
+
+        LoginResponse response = authService.login(loginRequest);
+        
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<LoginResponse> register(@RequestBody LoginRequest loginRequest,
+                                                   @RequestParam String email) {
+        if (loginRequest.getUsername() == null || loginRequest.getUsername().isEmpty() ||
+            loginRequest.getPassword() == null || loginRequest.getPassword().isEmpty() ||
+            email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                new LoginResponse(false, "Username, password, and email are required", null, null)
+            );
+        }
+
+        LoginResponse response = authService.register(loginRequest, email);
+        
+        if (response.isSuccess()) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+
+    @PostMapping("/validate")
+    public ResponseEntity<LoginResponse> validateToken(@RequestHeader("Authorization") String token) {
+        if (token == null || !token.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body(
+                new LoginResponse(false, "Invalid token format", null, null)
+            );
+        }
+
+        String jwtToken = token.substring(7);
+        boolean isValid = authService.validateToken(jwtToken);
+        
+        if (isValid) {
+            return ResponseEntity.ok(
+                new LoginResponse(true, "Token is valid", jwtToken, null)
+            );
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                new LoginResponse(false, "Invalid token", null, null)
+            );
+        }
+    }
+}
+```
+
+---
+
+## 12. index.html (Frontend)
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadHunter Pro Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #001a33 0%, #003d66 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .login-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(to right, #0d1b2a 0%, #1a2d3d 100%);
+        }
+
+        /* Left Section */
+        .left-section {
+            flex: 1;
+            background: linear-gradient(135deg, #001a33 0%, #0a2547 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo-container {
+            margin-bottom: 30px;
+        }
+
+        .lion-logo {
+            width: 150px;
+            height: 150px;
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.4));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .brand-title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #FFD700;
+            text-align: center;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .brand-title span {
+            color: #FFFFFF;
+            display: block;
+            font-size: 28px;
+            margin-top: 5px;
+            letter-spacing: 3px;
+        }
+
+        .globe-animation {
+            position: absolute;
+            bottom: 50px;
+            width: 300px;
+            height: 300px;
+            opacity: 0.3;
+        }
+
+        .globe {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #00BFFF;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(0, 191, 255, 0.2) 0%, transparent 70%);
+            box-shadow: 0 0 30px rgba(0, 191, 255, 0.2), inset 0 0 30px rgba(0, 191, 255, 0.1);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Right Section */
+        .right-section {
+            flex: 1;
+            background: linear-gradient(135deg, #0a2547 0%, #001a33 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            position: relative;
+        }
+
+        .right-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0, 191, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 0.3; }
+        }
+
+        .login-box {
+            background: rgba(20, 40, 60, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 15px;
+            padding: 50px 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+                        0 0 30px rgba(255, 215, 0, 0.1);
+            z-index: 10;
+        }
+
+        .login-box h2 {
+            color: #FFD700;
+            font-size: 28px;
+            margin-bottom: 30px;
+            text-align: center;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+
+        .input-wrapper:focus-within {
+            background: rgba(255, 215, 0, 0.1);
+            border-color: #FFD700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+        }
+
+        .input-wrapper .icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        input {
+            background: transparent;
+            border: none;
+            color: #FFFFFF;
+            width: 100%;
+            outline: none;
+            font-size: 14px;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .toggle-password {
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 18px;
+            user-select: none;
+        }
+
+        .login-btn, .register-btn, .back-btn {
+            width: 100%;
+            padding: 14px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .login-btn {
+            background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
+            color: #001a33;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .register-btn {
+            background: transparent;
+            color: #FFD700;
+            border: 2px solid #FFD700;
+            margin-top: 20px;
+        }
+
+        .register-btn:hover {
+            background: rgba(255, 215, 0, 0.1);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .back-btn {
+            background: transparent;
+            color: #FFD700;
+            border: 2px solid #FFD700;
+            margin-top: 15px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .divider {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            margin: 20px 0;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 14px;
+            min-height: 20px;
+        }
+
+        .message.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+
+        .message.error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #F44336;
+            border: 1px solid #F44336;
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                flex-direction: column;
+            }
+
+            .left-section {
+                display: none;
+            }
+
+            .login-box {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="left-section">
+            <div class="logo-container">
+                <svg class="lion-logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#DAA520;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <polygon points="100,20 120,50 110,50 125,70 100,60 75,70 90,50 80,50" fill="url(#goldGradient)"/>
+                    <circle cx="100" cy="110" r="35" fill="url(#goldGradient)"/>
+                    <circle cx="70" cy="95" r="25" fill="url(#goldGradient)"/>
+                    <circle cx="130" cy="95" r="25" fill="url(#goldGradient)"/>
+                    <circle cx="75" cy="120" r="22" fill="url(#goldGradient)"/>
+                    <circle cx="125" cy="120" r="22" fill="url(#goldGradient)"/>
+                    <circle cx="90" cy="105" r="4" fill="#1a1a1a"/>
+                    <circle cx="110" cy="105" r="4" fill="#1a1a1a"/>
+                    <polygon points="100,115 97,120 103,120" fill="#1a1a1a"/>
+                    <path d="M 100 120 Q 95 125 90 123" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+                    <path d="M 100 120 Q 105 125 110 123" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+                </svg>
+            </div>
+            <h1 class="brand-title">LEADHUNTER<br><span>PRO</span></h1>
+            <div class="globe-animation">
+                <div class="globe"></div>
+            </div>
+        </div>
+
+        <div class="right-section">
+            <div class="login-box">
+                <h2>Welcome Back</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <div class="input-wrapper">
+                            <span class="icon">👤</span>
+                            <input type="text" id="username" placeholder="Username" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="input-wrapper">
+                            <span class="icon">🔒</span>
+                            <input type="password" id="password" placeholder="Password" required>
+                            <span class="toggle-password" onclick="togglePassword()">👁️</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="login-btn">Login</button>
+                </form>
+
+                <div class="divider">or</div>
+
+                <button class="register-btn" onclick="toggleRegister()">Create Account</button>
+
+                <div id="message" class="message"></div>
+            </div>
+
+            <div class="login-box" id="registerBox" style="display:none;">
+                <h2>Create Account</h2>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <div class="input-wrapper">
+                            <span class="icon">👤</span>
+                            <input type="text" id="regUsername" placeholder="Username" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="input-wrapper">
+                            <span class="icon">📧</span>
+                            <input type="email" id="regEmail" placeholder="Email" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="input-wrapper">
+                            <span class="icon">🔒</span>
+                            <input type="password" id="regPassword" placeholder="Password" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="login-btn">Register</button>
+                </form>
+
+                <button class="back-btn" onclick="toggleRegister()">Back to Login</button>
+
+                <div id="regMessage" class="message"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080/api';
+
+        function togglePassword() {
+            const input = document.getElementById('password');
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        function toggleRegister() {
+            const loginBox = document.querySelector('.login-box');
+            const registerBox = document.getElementById('registerBox');
+            
+            loginBox.style.display = loginBox.style.display === 'none' ? 'block' : 'none';
+            registerBox.style.display = registerBox.style.display === 'none' ? 'block' : 'none';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.textContent = 'Login successful! Redirecting...';
+                    messageDiv.className = 'message success';
+                    
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 2000);
+                } else {
+                    messageDiv.textContent = data.message || 'Login failed';
+                    messageDiv.className = 'message error';
+                }
+            } catch (error) {
+                messageDiv.textContent = 'An error occurred. Please try again.';
+                messageDiv.className = 'message error';
+                console.error('Login error:', error);
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const messageDiv = document.getElementById('regMessage');
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/register?email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.textContent = 'Registration successful! You can now login.';
+                    messageDiv.className = 'message success';
+                    
+                    document.getElementById('registerForm').reset();
+                    setTimeout(() => {
+                        toggleRegister();
+                    }, 2000);
+                } else {
+                    messageDiv.textContent = data.message || 'Registration failed';
+                    messageDiv.className = 'message error';
+                }
+            } catch (error) {
+                messageDiv.textContent = 'An error occurred. Please try again.';
+                messageDiv.className = 'message error';
+                console.error('Register error:', error);
+            }
+        });
+
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                console.log('User already logged in');
+            }
+        });
+    </script>
+</body>
+</html>
+```
+
+---
+
+## 13. .gitignore
+```
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.backup
+release.properties
+.flattened-pom.xml
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+
+# Spring Boot
+application.properties.local
+```
+
+---
+
+## SETUP INSTRUCTIONS
+
+### Step 1: Create Database
+```sql
+CREATE DATABASE leadhunter_db;
+CREATE USER 'leadhunter'@'localhost' IDENTIFIED BY 'password123';
+GRANT ALL PRIVILEGES ON leadhunter_db.* TO 'leadhunter'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+### Step 2: Update application.properties
+Change database credentials to match your setup:
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/leadhunter_db
+spring.datasource.username=leadhunter
+spring.datasource.password=password123
+jwt.secret=your-super-secret-key-change-this-in-production
+```
+
+### Step 3: Build
+```bash
+mvn clean install
+```
+
+### Step 4: Run
+```bash
+mvn spring-boot:run
+```
+
+### Step 5: Access
+Open browser: http://localhost:8080
+
+---
+
+## API ENDPOINTS
+
+- **POST** `/api/auth/login` - Login with username and password
+- **POST** `/api/auth/register?email=user@example.com` - Register new user
+- **POST** `/api/auth/validate` - Validate JWT token
+
+---
+
+## TEST CREDENTIALS (after first registration)
+- Username: testuser
+- Password: password123
+- Email: test@example.com
